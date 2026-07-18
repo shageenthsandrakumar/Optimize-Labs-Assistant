@@ -1,213 +1,171 @@
-# MedResearch Companion
+# Optimize Labs Assistant
 
-A medical research companion tool built for the Frontier AI Hacker House hackathon. Doctors can search recent PubMed literature relevant to a patient's conditions and medications, with AI-generated explanations of why each study matters. Patients can upload prescriptions/documents for OCR extraction and chat with an AI health assistant.
+Built in one day at the **Frontier AI Hacker House** (OnlyExit / localhost:nyc), Fordham
+University, July 18 2026.
 
-## Tech Stack
+A two-sided AI companion for a doctor–patient relationship:
 
-- **Vite** (v8) — build tool and dev server
-- **React** (v19) + **TypeScript** (v6) — UI framework
-- **Tailwind CSS** (v4) — utility-first styling via `@tailwindcss/vite`
-- **React Router** (v7) — client-side routing between login, doctor, and patient views
+- **Doctors** pick a patient's conditions/medications and instantly see recent, *specifically
+  relevant* medical research — not a generic search box, but an LLM explaining *why* each
+  paper matters for that patient.
+- **Patients** upload a prescription or document, get it read automatically (no manual
+  transcription), and can ask an AI assistant questions about it.
 
-## Getting Started
+Inspired by the architecture patterns of an existing medical-records RAG backend (document
+ingestion → chunking → embeddings → RAG Q&A), but this is a **separate, standalone project** —
+no code or data is shared with that system.
 
-```bash
-# Install dependencies
-npm install
+## Team
 
-# Start the dev server
-npm run dev
+[Shageenth Sandrakumar](https://github.com/shageenthsandrakumar) (backend) ·
+[aarushi-network](https://github.com/aarushi-network) (frontend)
 
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
-
-The dev server runs at **http://localhost:5173**.
-
-## Application Overview
-
-The app has three views, accessed via a role-based login page:
-
-### Login Page (`/`)
-
-- Two role cards: **Patient Login** and **Doctor Login**
-- Clicking a role reveals a mock login form (username/password — any credentials work)
-- Routes to `/doctor` or `/patient` based on selection
-
-### Doctor View (`/doctor`)
-
-- **Patient Selector** — 3 hardcoded demo patients displayed as cards, each showing conditions (amber badges) and medications (blue badges)
-- **"Find Relevant Research" button** — triggers a search for the selected patient
-- **Loading State** — skeleton cards with pulse animation and a progress message ("Searching PubMed and analyzing relevance...")
-- **Results List** — cards for each matching study, featuring:
-  - Paper title
-  - **"Why This Matters" box** — the AI-generated relevance reasoning, visually prominent with a blue left border and tinted background
-  - Source badge (e.g., "PUBMED"), relevance score (e.g., "95% relevant"), publication date, and external ID
-  - "View source" link to the original paper
-- **Empty State** — shown before a patient is selected
-- **Error State** — shown if the API call fails, with a "Try again" button
-
-### Patient View (`/patient`)
-
-Two-panel layout (side-by-side on desktop, stacked on mobile):
-
-- **Left Panel — Document Scanner**
-  - Drag-and-drop or click-to-upload zone (accepts images and PDFs)
-  - Uploaded files appear in a list with processing status
-  - Once "done", clicking a document expands to show the OCR-extracted text
-- **Right Panel — Health Assistant Chatbot**
-  - Chat interface with message bubbles (user right-aligned, assistant left-aligned)
-  - Typing indicator animation while the assistant "thinks"
-  - Responds to keyword-based questions about medications, conditions, side effects, appointments, etc.
-  - Starts with a welcome message
-
-## Project Structure
+## Structure
 
 ```
-src/
-├── api/                          # API integration layer (swap mocks for real endpoints here)
-│   ├── fetchResearch.ts          # Doctor: PubMed research search
-│   ├── scanDocument.ts           # Patient: document OCR
-│   └── chatbot.ts                # Patient: RAG chatbot
-│
-├── data/                         # Mock data (used until backend is connected)
-│   ├── patients.ts               # 3 demo patients
-│   ├── mockResearchResponses.ts  # Per-patient research results (4-5 per patient)
-│   ├── mockOcrResults.ts         # Sample OCR-extracted text (prescription, lab report, discharge summary)
-│   └── mockChatResponses.ts      # Keyword-to-response map (~11 topics)
-│
-├── types/
-│   └── index.ts                  # Shared TypeScript interfaces
-│
-├── pages/
-│   ├── LoginPage.tsx             # Role selection + mock login form
-│   ├── DoctorView.tsx            # Doctor dashboard
-│   └── PatientView.tsx           # Patient dashboard
-│
-├── components/
-│   ├── shared/
-│   │   └── Header.tsx            # Top bar with app name, role badge, sign-out
-│   ├── doctor/
-│   │   ├── PatientSelector.tsx   # Patient card grid
-│   │   ├── ResearchButton.tsx    # Search trigger button
-│   │   ├── LoadingSkeleton.tsx   # Skeleton loading cards
-│   │   ├── ResultCard.tsx        # Single research result card
-│   │   ├── ResultsList.tsx       # Results container
-│   │   ├── EmptyState.tsx        # Pre-search placeholder
-│   │   └── ErrorState.tsx        # Error display with retry
-│   └── patient/
-│       ├── DocumentScanner.tsx   # File upload + OCR trigger
-│       ├── DocumentList.tsx      # Uploaded documents with expandable extracted text
-│       ├── ChatBot.tsx           # Chat UI with message list and input
-│       └── ChatMessage.tsx       # Single chat bubble
-│
-├── App.tsx                       # Router setup
-├── main.tsx                      # Entry point
-└── index.css                     # Tailwind CSS import
+backend/    FastAPI service — PubMed search, LLM ranking, OCR, chat
+frontend/   Vite + React + TypeScript UI
+docs/       Task briefs used to split the build
 ```
 
-## Demo Patients
+## Architecture
 
-| ID  | Label              | Conditions                                   | Medications                  |
-| --- | ------------------ | -------------------------------------------- | ---------------------------- |
-| p1  | Patient A — 58M    | Type 2 Diabetes, Hypertension                | Metformin, Lisinopril        |
-| p2  | Patient B — 45F    | Rheumatoid Arthritis                         | Methotrexate                 |
-| p3  | Patient C — 67M    | Chronic Kidney Disease Stage 3, Type 2 Diabetes | Metformin, Empagliflozin  |
+```
+                    ┌─────────────────────────────────────────┐
+  React frontend    │              FastAPI backend             │
+  (localhost:5173)  │              (localhost:8000)             │
+                     │                                           │
+  Doctor picks   ───►│ POST /api/research                       │
+  patient            │   1. Build a PubMed query from            │
+                     │      conditions + medications             │
+                     │   2. esearch + efetch (NCBI E-utilities)   │
+                     │   3. LLM scores relevance + writes a       │
+                     │      patient-specific "why it matters"     │
+                     │      (OpenRouter, openai/gpt-4o-mini)      │
+                     │                                           │
+  Patient uploads───►│ POST /api/scan                            │
+  a document          │   - PDF  → pdfplumber native text        │
+                      │   - Image → vision-LLM OCR (OpenRouter)   │
+                      │                                           │
+  Patient asks   ───►│ POST /api/chat                            │
+  a question          │   - LLM reply, stuffing any uploaded      │
+                       │     document text directly as context    │
+                       │     (no RAG/vector DB — see Scope below) │
+                     └─────────────────────────────────────────┘
+```
 
-## Chatbot Topics
+All three endpoints call out to OpenRouter (`https://openrouter.ai/api/v1`) rather than the
+OpenAI API directly — same `openai` Python SDK, just a different `base_url` + API key.
 
-The mock chatbot responds to questions containing these keywords:
-
-| Keyword(s)                               | Topic                          |
-| ---------------------------------------- | ------------------------------ |
-| metformin                                | Metformin usage and side effects |
-| lisinopril                               | Lisinopril (ACE inhibitor) info |
-| methotrexate                             | Methotrexate for RA            |
-| empagliflozin, jardiance                 | SGLT2 inhibitor info           |
-| diabetes, blood sugar, glucose           | Diabetes management            |
-| hypertension, blood pressure, bp         | Blood pressure management      |
-| arthritis, joint, rheumatoid             | Rheumatoid arthritis info      |
-| kidney, ckd, renal, egfr                 | Chronic kidney disease info    |
-| side effect, side effects, symptoms      | Managing medication side effects |
-| appointment, schedule, visit, doctor     | Scheduling guidance            |
-| dosage, dose, how much, how often        | Dosage instructions            |
-
-Any unrecognized question gets a fallback response suggesting valid topics.
-
-## Backend Integration
-
-The frontend is designed so that connecting to a real backend requires editing **only 3 files** — one per endpoint. Each file has the real `fetch()` call commented out:
-
-| File                      | Endpoint              | Method | Content Type            |
-| ------------------------- | --------------------- | ------ | ----------------------- |
-| `src/api/fetchResearch.ts` | `POST /api/research` | JSON   | `application/json`      |
-| `src/api/scanDocument.ts`  | `POST /api/scan`     | FormData | `multipart/form-data` |
-| `src/api/chatbot.ts`       | `POST /api/chat`     | JSON   | `application/json`      |
-
-The backend is expected to run at `http://localhost:8000` with CORS enabled for `http://localhost:5173`.
-
-## API Contracts
+## API contract
 
 ### `POST /api/research`
-
-**Request:**
 ```json
-{
-  "conditions": ["Type 2 Diabetes", "Hypertension"],
-  "medications": ["Metformin", "Lisinopril"],
-  "notes": ""
-}
-```
+// Request
+{ "conditions": ["Type 2 Diabetes"], "medications": ["Metformin"], "notes": "" }
 
-**Response:**
-```json
+// Response
 {
-  "query_terms": ["type 2 diabetes", "metformin", "hypertension"],
+  "query_terms": ["Type 2 Diabetes", "Metformin"],
   "matches": [
     {
       "source": "pubmed",
-      "external_id": "PMID12345",
-      "title": "Paper title",
-      "url": "https://pubmed.ncbi.nlm.nih.gov/12345",
-      "published_date": "2026-05-01",
-      "relevance_score": 0.91,
-      "relevance_reasoning": "Explanation of why this paper matters for this patient."
+      "external_id": "PMID38568468",
+      "title": "Metformin: Past, Present, and Future.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38568468/",
+      "published_date": "2024-Jun",
+      "relevance_score": 1.0,
+      "relevance_reasoning": "This paper reviews metformin, the patient's current medication..."
     }
   ]
 }
 ```
 
 ### `POST /api/scan`
-
-**Request:** `multipart/form-data` with a `file` field.
-
-**Response:**
+`multipart/form-data`, field name `file` (image or PDF).
 ```json
 {
-  "id": "uuid",
-  "fileName": "prescription.jpg",
-  "uploadedAt": "2026-07-18T14:30:00.000Z",
-  "extractedText": "Extracted text content...",
+  "id": "9dc36f05-...",
+  "fileName": "prescription.png",
+  "uploadedAt": "2026-07-18T19:08:42.602375+00:00",
+  "extractedText": "Rx: Metformin HCl 500 mg\n...",
   "status": "done"
 }
 ```
+`status` is `"error"` if OCR fails (e.g. a scanned, image-only PDF — see Scope below).
 
 ### `POST /api/chat`
-
-**Request:**
 ```json
-{
-  "message": "What is metformin used for?",
-  "context": ["optional extracted document text"]
-}
+// Request
+{ "message": "What are the side effects of metformin?", "context": [] }
+
+// Response
+{ "response": "Metformin commonly causes nausea, diarrhea..." }
+```
+`context` is an array of previously-extracted document texts (e.g. from `/api/scan`); if
+present, it's included directly in the prompt so the assistant can answer questions about the
+patient's specific records.
+
+## Running locally
+
+### Backend
+
+Requires Python 3.11–3.13 (Python 3.14 currently fails to build `pydantic-core` from source
+on Windows — no prebuilt wheel yet. If you hit that, use WSL/Linux, which has 3.12 by default).
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate      # or .venv\Scripts\activate on native Windows
+pip install -r requirements.txt
+cp .env.example .env           # fill in OPENROUTER_API_KEY
+uvicorn main:app --reload --port 8000
 ```
 
-**Response:**
-```json
-{
-  "response": "Metformin is a first-line medication for Type 2 Diabetes..."
-}
+`.env` variables:
+
+| Variable | Required | Notes |
+|---|---|---|
+| `OPENROUTER_API_KEY` | Yes | From [openrouter.ai](https://openrouter.ai) |
+| `OPENROUTER_MODEL` | No | Defaults to `openai/gpt-4o-mini` (used for ranking, OCR, and chat) |
+| `NCBI_API_KEY` | No | Raises PubMed rate limit from 3/sec to 10/sec |
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev     # http://localhost:5173
 ```
+
+CORS on the backend is locked to `http://localhost:5173` — update
+`app.add_middleware(CORSMiddleware, ...)` in `backend/main.py` if the frontend runs elsewhere.
+
+## Scope for today's build
+
+Deliberately cut to fit a one-day build — see [docs/frontend-task.md](docs/frontend-task.md)
+for the original task brief:
+
+- **One literature source** (PubMed). ClinicalTrials.gov trial-matching and Semantic Scholar
+  are roadmap items, not built today.
+- **No OCR system dependencies.** `/api/scan` uses a vision-capable LLM instead of
+  Tesseract/Poppler — no binary installs, works for images out of the box. PDFs use
+  `pdfplumber`'s native text layer only; **scanned/image-only PDFs aren't supported today**
+  (would need `pdf2image` + Poppler, the exact setup risk we chose to avoid).
+- **No RAG for chat.** `/api/chat` stuffs document text directly into the prompt rather than
+  chunking/embedding into a vector DB — fine at demo scale (a handful of short documents per
+  patient), would need real retrieval to scale to a full medical history.
+- **No auth, no database.** Demo patients are hardcoded in the frontend; nothing persists
+  across requests or page reloads.
+- **Resilience over strictness for the demo:** each LLM-backed endpoint degrades gracefully
+  (e.g. falls back to unranked-but-present results) rather than returning a 500 if OpenRouter
+  or PubMed hiccups mid-demo.
+
+## Roadmap (post-hackathon)
+
+- ClinicalTrials.gov trial-matching + Semantic Scholar as additional research sources
+- Proactive alerts: rerun research matching on a schedule, notify doctors of *new* relevant
+  papers instead of only on-demand search
+- Real document ingestion pipeline (OCR for scanned PDFs, chunking, embeddings) to support
+  RAG chat over a patient's full document history
+- Auth + persistence (patient/doctor accounts, saved research history, audit trail)

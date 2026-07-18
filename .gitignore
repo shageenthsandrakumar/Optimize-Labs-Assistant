@@ -7,15 +7,34 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+node_modules/
+
+# Build
 dist
 dist-ssr
 *.local
+.vite/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Env
+.env
+.env.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
+.idea/
+
+# OS
 .DS_Store
 *.suo
 *.ntvs*
