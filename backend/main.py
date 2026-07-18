@@ -2,10 +2,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI
+import uuid
+from datetime import datetime, timezone
+
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from chat import chat_reply
+from ocr import extract_text
 from pubmed import search_pubmed
 from ranking import rank_papers
 
@@ -62,6 +67,48 @@ async def research(req: ResearchRequest) -> ResearchResponse:
         query_terms=req.conditions + req.medications,
         matches=matches,
     )
+
+
+class ScanResponse(BaseModel):
+    id: str
+    fileName: str
+    uploadedAt: str
+    extractedText: str
+    status: str
+
+
+@app.post("/api/scan", response_model=ScanResponse)
+async def scan(file: UploadFile = File(...)) -> ScanResponse:
+    data = await file.read()
+    try:
+        text = await extract_text(file.filename or "upload", file.content_type or "", data)
+        status = "done"
+    except Exception:
+        text = ""
+        status = "error"
+
+    return ScanResponse(
+        id=str(uuid.uuid4()),
+        fileName=file.filename or "upload",
+        uploadedAt=datetime.now(timezone.utc).isoformat(),
+        extractedText=text,
+        status=status,
+    )
+
+
+class ChatRequest(BaseModel):
+    message: str
+    context: list[str] = []
+
+
+class ChatResponse(BaseModel):
+    response: str
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest) -> ChatResponse:
+    reply = await chat_reply(req.message, req.context)
+    return ChatResponse(response=reply)
 
 
 @app.get("/health")
