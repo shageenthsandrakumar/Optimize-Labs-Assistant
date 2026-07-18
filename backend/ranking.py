@@ -3,7 +3,12 @@ import os
 
 from openai import AsyncOpenAI
 
-MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+def _client() -> AsyncOpenAI:
+    return AsyncOpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("OPENROUTER_API_KEY"),
+    )
+
 
 SYSTEM_PROMPT = """You are a clinical research assistant helping a doctor keep up with
 literature relevant to a specific patient. You will be given the patient's conditions and
@@ -42,9 +47,9 @@ async def rank_papers(
     if not papers:
         return []
 
-    client = AsyncOpenAI()
-    response = await client.chat.completions.create(
-        model=MODEL,
+    model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+    response = await _client().chat.completions.create(
+        model=model,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},

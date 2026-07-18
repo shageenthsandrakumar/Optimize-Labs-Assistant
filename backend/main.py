@@ -1,12 +1,13 @@
 from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from pubmed import search_pubmed
 from ranking import rank_papers
-
-load_dotenv()
 
 app = FastAPI(title="Optimize Labs Assistant — Research API")
 
