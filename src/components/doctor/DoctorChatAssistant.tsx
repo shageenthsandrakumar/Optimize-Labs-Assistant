@@ -60,7 +60,7 @@ export default function DoctorChatAssistant({ patient }: DoctorChatAssistantProp
     setIsTyping(true);
 
     try {
-      const response = await doctorChatRespond(text, patient.id);
+      const response = await doctorChatRespond(text, patient);
       const assistantMsg: ChatMessageType = {
         id: crypto.randomUUID(),
         role: "assistant",

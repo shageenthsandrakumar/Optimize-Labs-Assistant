@@ -21,6 +21,7 @@ dist-ssr
 __pycache__/
 *.pyc
 .venv/
+.venv-wsl/
 venv/
 *.egg-info/
 

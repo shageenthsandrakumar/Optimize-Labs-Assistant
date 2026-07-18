@@ -9,7 +9,7 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from chat import chat_reply
+from chat import chat_reply, doctor_chat_reply
 from ocr import extract_text
 from pubmed import search_pubmed
 from ranking import rank_papers
@@ -111,6 +111,20 @@ class ChatResponse(BaseModel):
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     reply = await chat_reply(req.message, req.context)
+    return ChatResponse(response=reply)
+
+
+class DoctorChatRequest(BaseModel):
+    message: str
+    patient_id: str
+    conditions: list[str] = []
+    medications: list[str] = []
+    context: list[str] = []
+
+
+@app.post("/api/doctor-chat", response_model=ChatResponse)
+async def doctor_chat(req: DoctorChatRequest) -> ChatResponse:
+    reply = await doctor_chat_reply(req.message, req.conditions, req.medications, req.context)
     return ChatResponse(response=reply)
 
 
