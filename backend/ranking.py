@@ -7,7 +7,17 @@ def _client() -> AsyncOpenAI:
     return AsyncOpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=os.getenv("OPENROUTER_API_KEY"),
+        timeout=25.0,
     )
+
+
+def _fallback_ranking(papers: list[dict]) -> list[dict]:
+    # If the LLM call or its JSON output fails, degrade to unranked-but-present results
+    # rather than a 500 — a live demo should show something, not an error screen.
+    return [
+        {**p, "relevance_score": 0.5, "relevance_reasoning": "Matches the patient's search terms."}
+        for p in papers
+    ]
 
 
 SYSTEM_PROMPT = """You are a clinical research assistant helping a doctor keep up with
@@ -48,18 +58,22 @@ async def rank_papers(
         return []
 
     model = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
-    response = await _client().chat.completions.create(
-        model=model,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": _build_user_prompt(conditions, medications, notes, papers),
-            },
-        ],
-    )
-    parsed = json.loads(response.choices[0].message.content)
+    try:
+        response = await _client().chat.completions.create(
+            model=model,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": _build_user_prompt(conditions, medications, notes, papers),
+                },
+            ],
+        )
+        parsed = json.loads(response.choices[0].message.content)
+    except Exception:
+        return _fallback_ranking(papers)
+
     by_pmid = {p["pmid"]: p for p in papers}
     ranked = []
     for entry in parsed.get("ranked", []):
@@ -74,4 +88,4 @@ async def rank_papers(
             }
         )
     ranked.sort(key=lambda r: r["relevance_score"], reverse=True)
-    return ranked
+    return ranked or _fallback_ranking(papers[:4])

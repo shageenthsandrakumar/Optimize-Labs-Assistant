@@ -47,7 +47,10 @@ class ResearchResponse(BaseModel):
 
 @app.post("/api/research", response_model=ResearchResponse)
 async def research(req: ResearchRequest) -> ResearchResponse:
-    papers = await search_pubmed(req.conditions, req.medications, retmax=10)
+    try:
+        papers = await search_pubmed(req.conditions, req.medications, retmax=10)
+    except Exception:
+        papers = []
     ranked = await rank_papers(req.conditions, req.medications, req.notes, papers)
 
     matches = [

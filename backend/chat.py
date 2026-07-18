@@ -14,6 +14,7 @@ def _client() -> AsyncOpenAI:
     return AsyncOpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=os.getenv("OPENROUTER_API_KEY"),
+        timeout=25.0,
     )
 
 
@@ -27,5 +28,11 @@ async def chat_reply(message: str, context: list[str]) -> str:
         )
     messages.append({"role": "user", "content": message})
 
-    response = await _client().chat.completions.create(model=model, messages=messages)
-    return (response.choices[0].message.content or "").strip()
+    try:
+        response = await _client().chat.completions.create(model=model, messages=messages)
+        return (response.choices[0].message.content or "").strip()
+    except Exception:
+        return (
+            "Sorry, I'm having trouble reaching the assistant right now. "
+            "Please try again in a moment."
+        )

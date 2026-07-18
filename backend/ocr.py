@@ -15,6 +15,7 @@ def _client() -> AsyncOpenAI:
     return AsyncOpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=os.getenv("OPENROUTER_API_KEY"),
+        timeout=25.0,
     )
 
 
