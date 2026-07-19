@@ -1,7 +1,8 @@
 # Optimize Labs Assistant
 
-Built in one day at the **Frontier AI Hacker House** (OnlyExit / localhost:nyc), Fordham
-University, July 18 2026.
+**[Live demo](https://shageenthsandrakumar.github.io/Optimize-Labs-Assistant/)** — built in
+one day at the **Frontier AI Hacker House** (OnlyExit / localhost:nyc), Fordham University,
+July 18 2026.
 
 A two-sided AI companion for a doctor–patient relationship:
 
@@ -15,6 +16,19 @@ A two-sided AI companion for a doctor–patient relationship:
 Inspired by the architecture patterns of an existing medical-records RAG backend (document
 ingestion → chunking → embeddings → RAG Q&A), but this is a **separate, standalone project** —
 no code or data is shared with that system.
+
+## What this is a prototype for
+
+This started as a hackathon exploration of a feature that a system like that one could
+plausibly build in the future: instead of a patient-facing RAG chatbot answering questions
+about *one* patient's own records, a doctor-facing layer that takes a patient's actual
+conditions and medications and proactively surfaces the research literature relevant to
+*that specific patient*, with an LLM explaining why each result matters rather than returning
+a generic ranked list. It's the same underlying idea (ground an LLM in one patient's real
+record instead of answering in the abstract), pointed at a different user and a different
+moment: not "the patient asking about themselves," but "the doctor keeping up with research
+for the person in front of them." Nothing here is wired into that system; it's a standalone
+proof that the idea works, built and demoed end to end in a day.
 
 ## Team
 
@@ -174,25 +188,33 @@ npm install
 npm run dev     # http://localhost:5173
 ```
 
-CORS on the backend allows `http://localhost:5173` by default — set `FRONTEND_ORIGINS` in
-`backend/.env` (comma-separated) to add more, e.g. a deployed Vercel URL.
+By default this shows the same static, captured responses as the deployed site (see
+"Deployment: why static" below) — `npm run dev` doesn't call the backend even if it's running.
+To wire it back to a live backend, revert `src/api/fetchResearch.ts`, `scanDocument.ts`,
+`chatbot.ts`, and `doctorChat.ts` to `fetch()` calls instead of the `staticData.ts` imports;
+the backend's CORS already accepts `http://localhost:5173` by default (`FRONTEND_ORIGINS` in
+`backend/.env` to add more).
 
-## Deployment
+## Deployment: why static
 
-**Backend → Render.** The repo includes `render.yaml` at the root (Render Blueprint). In the
-Render dashboard: New → Blueprint → point at this repo. It builds `backend/` with
-`pip install -r requirements.txt` and runs `uvicorn main:app --host 0.0.0.0 --port $PORT`. Set
-`OPENROUTER_API_KEY` (required) and `FRONTEND_ORIGINS` (set to your deployed Vercel URL once
-you have it) in the Render dashboard — both are marked `sync: false` in the blueprint so
-they're never committed to the repo.
+The live demo is a **static frontend deployed to GitHub Pages** (`npm run deploy`, via the
+`gh-pages` package, publishing `dist/` to the `gh-pages` branch), not a live backend behind it.
+That's a deliberate choice, not a limitation we ran out of time to fix:
 
-**Frontend → Vercel.** Import this repo directly (frontend lives at repo root, so no root
-directory override needed). Set the environment variable `VITE_API_BASE_URL` to your deployed
-Render backend URL (e.g. `https://optimize-labs-backend.onrender.com`) before building.
+- A live backend means every visitor's click makes a real, metered LLM API call against
+  someone's personal API key, indefinitely, with no natural cap. That's an open-ended cost for
+  a hackathon artifact meant to just sit and be looked at.
+- Free-tier backend hosts (we'd used Render before) spin down after inactivity and cold-start
+  slowly on the next visit, or can change their free-tier terms entirely, which risks the demo
+  quietly degrading or disappearing months later.
 
-Deploy order matters a little: deploy the backend first to get its URL, put that URL into
-Vercel's `VITE_API_BASE_URL`, deploy the frontend to get *its* URL, then go back and add that
-URL to Render's `FRONTEND_ORIGINS` so CORS allows it.
+So `src/api/staticData.ts` holds **real responses captured from the actual live backend**
+during and after the hackathon (verified PubMed results, verified OCR output, verified chat
+replies), and the frontend replays those instead of calling `fetch()`. Clicking "Find Relevant
+Research" on Patient C returns the exact real PubMed match and LLM reasoning the live backend
+returned when we tested it, not fabricated content, just no longer computed on demand. The
+`backend/` service is still fully real and runnable (see "Running locally" above) if you want
+to see it compute fresh answers for a new patient.
 
 ## Scope for today's build
 

@@ -1,21 +1,16 @@
 import type { ResearchResponse } from "../types";
-import { API_BASE_URL } from "./config";
+import { RESEARCH_RESPONSES } from "./staticData";
 
+// Static replay of real captured backend responses — see staticData.ts and the
+// README "Why static" section for why this isn't a live fetch() anymore.
 export async function fetchResearch(patient: {
   id?: string;
   conditions: string[];
   medications: string[];
   notes?: string;
 }): Promise<ResearchResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/research`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      conditions: patient.conditions,
-      medications: patient.medications,
-      notes: patient.notes ?? "",
-    }),
-  });
-  if (!res.ok) throw new Error(`Research request failed (${res.status})`);
-  return res.json();
+  await new Promise((r) => setTimeout(r, 1800));
+
+  const patientId = patient.id ?? "p1";
+  return RESEARCH_RESPONSES[patientId] ?? RESEARCH_RESPONSES["p1"];
 }

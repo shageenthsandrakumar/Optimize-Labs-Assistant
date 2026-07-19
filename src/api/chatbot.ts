@@ -1,15 +1,17 @@
-import { API_BASE_URL } from "./config";
+import { CHAT_RESPONSES, CHAT_FALLBACK } from "./staticData";
 
+// Static replay of real captured chat responses — see staticData.ts.
 export async function chatbotRespond(
   message: string,
-  context?: string[]
+  _context?: string[]
 ): Promise<string> {
-  const res = await fetch(`${API_BASE_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, context: context ?? [] }),
-  });
-  if (!res.ok) throw new Error(`Chat request failed (${res.status})`);
-  const data = await res.json();
-  return data.response;
+  await new Promise((r) => setTimeout(r, 900));
+
+  const lower = message.toLowerCase();
+  for (const entry of CHAT_RESPONSES) {
+    if (entry.keywords.some((kw) => lower.includes(kw))) {
+      return entry.response;
+    }
+  }
+  return CHAT_FALLBACK;
 }

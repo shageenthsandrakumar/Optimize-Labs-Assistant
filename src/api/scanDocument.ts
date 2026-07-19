@@ -1,13 +1,14 @@
 import type { ScannedDocument } from "../types";
-import { API_BASE_URL } from "./config";
+import { SCAN_RESPONSE } from "./staticData";
 
+// Static replay of a real captured OCR response — see staticData.ts.
 export async function scanDocument(file: File): Promise<ScannedDocument> {
-  const formData = new FormData();
-  formData.append("file", file);
-  const res = await fetch(`${API_BASE_URL}/api/scan`, {
-    method: "POST",
-    body: formData,
-  });
-  if (!res.ok) throw new Error(`Scan request failed (${res.status})`);
-  return res.json();
+  await new Promise((r) => setTimeout(r, 1500));
+
+  return {
+    ...SCAN_RESPONSE,
+    id: crypto.randomUUID(),
+    fileName: file.name,
+    uploadedAt: new Date().toISOString(),
+  };
 }
