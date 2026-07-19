@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import os
 import uuid
 from datetime import datetime, timezone
 
@@ -16,9 +17,13 @@ from ranking import rank_papers
 
 app = FastAPI(title="Optimize Labs Assistant — Research API")
 
+# Comma-separated list, e.g. "http://localhost:5173,https://optimize-labs.vercel.app"
+_origins = os.getenv("FRONTEND_ORIGINS", "http://localhost:5173")
+allow_origins = [o.strip() for o in _origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allow_origins,
     allow_methods=["POST"],
     allow_headers=["*"],
 )

@@ -1,4 +1,5 @@
 import type { ResearchResponse } from "../types";
+import { API_BASE_URL } from "./config";
 
 export async function fetchResearch(patient: {
   id?: string;
@@ -6,7 +7,7 @@ export async function fetchResearch(patient: {
   medications: string[];
   notes?: string;
 }): Promise<ResearchResponse> {
-  const res = await fetch("http://localhost:8000/api/research", {
+  const res = await fetch(`${API_BASE_URL}/api/research`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

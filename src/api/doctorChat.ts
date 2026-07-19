@@ -1,11 +1,12 @@
 import type { Patient } from "../types";
+import { API_BASE_URL } from "./config";
 
 export async function doctorChatRespond(
   message: string,
   patient: Patient,
   context?: string[]
 ): Promise<string> {
-  const res = await fetch("http://localhost:8000/api/doctor-chat", {
+  const res = await fetch(`${API_BASE_URL}/api/doctor-chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

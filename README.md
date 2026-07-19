@@ -174,8 +174,25 @@ npm install
 npm run dev     # http://localhost:5173
 ```
 
-CORS on the backend is locked to `http://localhost:5173` — update
-`app.add_middleware(CORSMiddleware, ...)` in `backend/main.py` if the frontend runs elsewhere.
+CORS on the backend allows `http://localhost:5173` by default — set `FRONTEND_ORIGINS` in
+`backend/.env` (comma-separated) to add more, e.g. a deployed Vercel URL.
+
+## Deployment
+
+**Backend → Render.** The repo includes `render.yaml` at the root (Render Blueprint). In the
+Render dashboard: New → Blueprint → point at this repo. It builds `backend/` with
+`pip install -r requirements.txt` and runs `uvicorn main:app --host 0.0.0.0 --port $PORT`. Set
+`OPENROUTER_API_KEY` (required) and `FRONTEND_ORIGINS` (set to your deployed Vercel URL once
+you have it) in the Render dashboard — both are marked `sync: false` in the blueprint so
+they're never committed to the repo.
+
+**Frontend → Vercel.** Import this repo directly (frontend lives at repo root, so no root
+directory override needed). Set the environment variable `VITE_API_BASE_URL` to your deployed
+Render backend URL (e.g. `https://optimize-labs-backend.onrender.com`) before building.
+
+Deploy order matters a little: deploy the backend first to get its URL, put that URL into
+Vercel's `VITE_API_BASE_URL`, deploy the frontend to get *its* URL, then go back and add that
+URL to Render's `FRONTEND_ORIGINS` so CORS allows it.
 
 ## Scope for today's build
 
